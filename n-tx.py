@@ -1,41 +1,38 @@
 #!/usr/bin/python3
 import libnmo
 
-import json
+import json, os, logging
 from redis import StrictRedis
 from datetime import datetime
 
-API_KEY = ""
-API_SECRET = ""
+API_KEY = os.environ.get("NMO_KEY")
+API_SECRET = os.environ.get("NMO_SECRET")
 
 SEND_KEY = "ntosend"
 ERROR_KEY = "nerrored"
 
 SENT_COLDSTORE = "n_tx_sent.json"
 
-def log(msg, level="info"):
-	print("n-tx [%sUTC] %s: %s" % (level, datetime.utcnow().isoformat(), msg))
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def run():
-	redis = redis.StrictRedis()
+	redis = StrictRedis()
 	nm = libnmo.Nexmo(API_KEY, API_SECRET)
-	log("started! ^_^")
-	log("  starting balance: %d" % (nm.balance))
-	log("  current send list size: " % (redis.llen(SEND_KEY)))
-	log("  current error list size: " % (redis.llen(ERROR_KEY)))
-
+	logger.info("started! ^_^")
+	logger.info("  starting balance: %f" % (nm.balance))
+	logger.info("  current send list size: %d" % (redis.llen(SEND_KEY)))
+	logger.info("  current error list size: %d" % (redis.llen(ERROR_KEY)))
 
 	while True:
 		j_msg = json.loads(redis.blpop(SEND_KEY))
-		log("processing new message")
-		log("  from: %s", level="debug")
-		log("  to: %s", level="debug")
-		log("  body: %s", level="debug")
+		logger.info("processing new message (%s->%s)" % (j_msg["from"], j_msg["to"]))
+		logger.debug("  body: %s" % (j_msg["body"]))
 		message = libnmo.NexmoMessage.new_text(j_msg["from"], j_msg["to"], j_msg["body"])
-		log("  created message", level="debug")
+		logger.debug("  created message")
 		responses = nm.send_msg(message)
 		# scrub api key and secret from cold store
-		log("  sent request to nexmo", level="debug")
+		logger.debug("  sent request to nexmo")
 		del message["api_key"]
 		del message["api_secret"]
 		thing = {
@@ -48,18 +45,19 @@ def run():
 				# bad times :<
 			for r in responses["messages"]:
 				if r["status"] > 0:
-					log("    sending message failed, %s" % (r["error-text"]), level="ERROR")
-			log("  added message to error list (%s)" % (ERROR_KEY))
+					logger.error("    sending message failed, %s" % (r["error-text"]))
+			logger.info("  added message to error list (%s)" % (ERROR_KEY))
 			redis.rpush(ERROR_KEY, json.dumps(thing))
 			continue
 
-		log("  message sent (%d parts), current balance: %d" % (responses["message-count"], nm.balance))
+		logger.info("  message sent (%d parts), current balance: %d" % (responses["message-count"], nm.balance))
 
 		with open(SENT_COLDSTORE, "r") as cold_f:
 			cold = json.load(cold_f)
 		cold.append(thing)
 		with open(SENT_COLDSTORE, "w") as cold_f:
 			json.dump(cold, cold_f)
-		log("  saved message and responses to outbound coldstore (%s)" % (SENT_COLDSTORE))
+		logger.debug("  saved message and responses to outbound coldstore (%s)" % (SENT_COLDSTORE))
+		logger.debug("finished processing message")
 
-		log("finished processing message")
+run()

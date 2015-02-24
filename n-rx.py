@@ -1,6 +1,8 @@
 from flask import Flask, jsonify, request
 from redis import StrictRedis
 
+NEXMO_CALLBACK_SECRET = ""
+
 # instead of coldstoring any of this individual applications should iterate through
 # the lists themselves and process/coldstore the dlr's and inbound messages that they
 # expect to see and ignore the rest.
@@ -55,13 +57,12 @@ def check_nexmo():
 
 @app.route("/", methods=["GET"])
 def index():
-	if request.args.get("status", None): # probably a dlr...
-		# check req
+	if not NEXMO_CALLBACK_SECRET == reqest.args.get("nmo-secret", None):
+		return 403, "bad boys bad boys whatcha gnna do"
 
+	if request.args.get("status", None): # probably a dlr...
 		process_dlr(request.args)
 		return 200
 	else: # probably an inbound
-		#check req
-
 		process_inbound(request.args)
 		return 200
