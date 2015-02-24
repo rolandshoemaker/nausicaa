@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 import libnmo
 
-import redis, json
+import json
+from redis import StrictRedis
 from datetime import datetime
 
 API_KEY = ""
@@ -20,7 +21,7 @@ def run():
 		j_msg = json.loads(redis.blpop(SEND_KEY))
 		message = libnmo.NexmoMessage.new_text(j_msg["from"], j_msg["to"], j_msg["body"])
 		responses = nm.send_msg(message)
-		# scrub api key and secret
+		# scrub api key and secret from cold store
 		del message["api_key"]
 		del message["api_secret"]
 		thing = {
