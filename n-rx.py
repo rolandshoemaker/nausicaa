@@ -14,6 +14,10 @@ NEXMO_RANGES = [
 	"119.81.44.0/28"
 ]
 
+DEV_RANGES = [
+	"192.168.1.0/24"
+]
+
 app = Flask(__name__)
 redis = redis.StrictRedis()
 
@@ -21,6 +25,7 @@ def combine_split(parts):
 	pass
 
 def process_dlr(qs):
+	# pretty simple
 	redis.rpush(DLR_KEY, json.dumps(qs))
 
 def process_inbound(qs):
@@ -45,7 +50,7 @@ def process_inbound(qs):
 
 @app.before_request
 def check_nexmo():
-	if not all(ip_address(request.remote_addr) in ip_network(n) for n in NEXMO_RANGES):
+	if not all(ip_address(request.remote_addr) in ip_network(n) for n in NEXMO_RANGES+DEV_RANGES):
 		return 403, "bad boys bad boys whatcha gnna do"
 
 @app.route("/", methods=["GET"])

@@ -8,15 +8,13 @@ BASE_URL = "https://rest.nexmo.com"
 RESP_TYPE = "json"
 
 def send_request(url, method="post", url_args=None, json_obj=None):
-	if url_args:
-		url = "%s?%s" % (url, urlencode(url_args))
 	if method == "get":
-		r = requests.get(url)
+		r = requests.get(url, params=url_args)
 		if not r.status_code == 200:
 			raise ValueError # or you know something proper...
 		return r.json()
 	elif method =="post":
-		r = requests.post(url)
+		r = requests.post(url, params=url_args)
 		if not r.status_code == 200:
 			raise ValueError # ...
 		return r.json()
@@ -27,7 +25,7 @@ def validate_msg(msg):
 class Nexmo(object):
 	key = None
 	secret = None
-	balance = None
+	balance = None # in euros...
 	numbers = None
 
 	def __init__(self, key, secret):
