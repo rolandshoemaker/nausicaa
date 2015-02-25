@@ -1,8 +1,9 @@
-from config import NEXMO_CALLBACK_SECRET, DLR_KEY, INBOUND_KEY, INBOUNDCS_KEY, NEXMO_RANGES, DEV_RANGES, ADMIN_NUM
+from config import NEXMO_CALLBACK_SECRET, DLR_KEY, INBOUND_KEY, INBOUNDCS_KEY, NEXMO_RANGES, DEV_RANGES, ADMIN_NUM, FILTERS_PATH
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, abort
 from redis import StrictRedis
-import logging
+from ipaddress import ip_address, ip_network
+import logging, json
 
 app = Flask(__name__)
 redis = StrictRedis()
@@ -19,11 +20,14 @@ def combine_split(parts):
 def process_dlr(qs):
 	# pretty simple
 	redis.rpush(DLR_KEY, json.dumps(qs))
+	logger.info("  stored delivery report for message %s in list [%s]" % (qs["messageId"], DLR_KEY))
 
 def nmo_cmd(msg):
-	if msg.get("msisdn", "") == ADMIN_NUM:
+	if msg.get("msisdn", None) == ADMIN_NUM:
 		keyword = msg.get("keyword", "") or msg.get("text", "").split(" ")[0]
 		if keyword in ["n-tx", "n-rx"]:
+			logger.info("  recieved command message from admin number (%s)" % (ADMIN_NUM))
+			logger.info("    %s" % (msg["text"]))
 			command = msg.get("text", "").split(" ")[1]
 			args = msg.get("text", "").split(" ")[2:]
 			if keyword == "n-tx":
@@ -35,7 +39,8 @@ def nmo_cmd(msg):
 				"app": "n-rx",
 				"message": msg
 			}
-			redis.rpush(INBOUNDCS_KEY, store)
+			redis.rpush(INBOUNDCS_KEY, json.dumps(store))
+			logger.info("  stored inbound command message %s in list [%s]" % (msg["messageId"], INBOUNDCS_KEY))
 			return True
 
 def sort_msg_into_redis(msg, filters):
@@ -56,25 +61,20 @@ def sort_msg_into_redis(msg, filters):
 
 		# if we got here everything should've matched
 		redis.rpush(f["store_key"], json.dumps(msg))
+		logger.debug("filter %s matched message for application %s" % (f["filter_name"]), f["filter_for"])
+		logger.info("  stored inbound command message %s in list [%s]" % (msg["messageId"], f["store_key"]))
 		return True
 	return False
 
-
-# instead of coldstoring any of this individual applications should iterate through
-# the lists themselves and process/coldstore the dlr's and inbound messages that they
-# expect to see and ignore the rest. (except nmo commands, we will coldstore those in
-# nmo_cmd()...)
-
-# this should also have something like filter() that can take a json format file and
-# sort inbound messages into certain redis lists based on filters...
 def process_inbound(qs):
 	if qs.get("concat", None):
 		parts_lkey = "nsplit:%s" % (qs["concat-ref"])
+		logger.debug("partial message, part %d of total %d, tmp list [%s]" % (message["concat-part"], message["concat-total"], parts_lkey))
 		if qs["concat-part"] == qs["concat-total"]:
 			# last part so lets combine them into one message!
 			redis.lock(parts_lkey) # this is prob not needed...
 			# these should be in the right order already... i think?
-			parts = [json.loads(p) for p in redis.lrange(parts_lkey, 0, -1)]
+			parts = [json.loads(p.decote("utf-8")) for p in redis.lrange(parts_lkey, 0, -1)]
 			body = "".join([p["text"] for p in parts])
 			body += qs["text"]
 			message = parts[0]
@@ -82,28 +82,41 @@ def process_inbound(qs):
 			del message["concat-part"]
 			redis.release(parts_lkey)
 			redis.delete(parts_lkey)
+			logger.info("  assembled split message %s" % (message["messageId"]))
+
 			# check if its a nmo_cmd, if not pass to inbound queue
 			if not nmo_cmd(message) and not sort_msg_into_redis(qs, inbound_filters):
 				redis.rpush(INBOUND_KEY, json.dumps(message))
+				logger.info("  stored unsorted inbound message %s in list [%s]" % (message["messageId"], INBOUND_KEY))
 		else:
 			redis.rpush(parts_lkey, json.dumps(qs))
+			logger.info("  stored partial inbound message %d-%d in list [%s]" % (message["concat-part"], message["concat-total"], parts_lkey))	
 	else:
 		if not nmo_cmd(qs) and not sort_msg_into_redis(qs, inbound_filters):
 			redis.rpush(INBOUND_KEY, json.dumps(qs))
+			logger.info("  stored unsorted inbound message %s in list [%s]" % (qs["messageId"], INBOUND_KEY))
 
 @app.before_request
 def check_nexmo():
-	if not all(ip_address(request.remote_addr) in ip_network(n) for n in NEXMO_RANGES+DEV_RANGES):
+	if not any(ip_address(request.remote_addr) in ip_network(n) for n in NEXMO_RANGES+DEV_RANGES):
+		logger.warning("request from invalid remote address (%s)" % (request.remote_addr))
 		abort(403)
 
 @app.route("/", methods=["GET"])
 def index():
-	if not NEXMO_CALLBACK_SECRET == reqest.args.get("nmo-secret", None):
+	if not NEXMO_CALLBACK_SECRET == request.args.get("nmo-secret", None):
+		logger.warning("invalid NEXMO_CALLBACK_SECRET from %s" % (request.remote_addr))
 		abort(403) # "bad boys bad boys whatcha gnna do"
 
 	if request.args.get("status", None): # probably a dlr...
+		logger.info("recieved an delivery report")
 		process_dlr(request.args)
-		return 200
-	else: # probably an inbound
+		return ""
+	elif request.args.get("type", None): # probably an inbound
+		logger.info("recieved an inbound message")
 		process_inbound(request.args)
-		return 200
+		return ""
+	else:
+		return "idk"
+
+app.run(host="10.0.0.5")

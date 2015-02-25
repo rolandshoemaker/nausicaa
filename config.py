@@ -11,7 +11,7 @@ NEXMO_RANGES = [
 	"119.81.44.0/28"
 ]
 DEV_RANGES = [
-	"192.168.1.0/24"
+	"10.0.0.0/24"
 ]
 
 ADMIN_NUM = os.environ.get("NMO_ADMIN_NUM")
@@ -24,8 +24,8 @@ SEND_KEY = "ntosend"
 SENTCS_KEY = "nsentcs"
 ERROR_KEY = "nerrord"
 
-SENTCS_PATH = "n_sent_coldstore.js"
-INBOUNDCS_PATH = "n_inbound_coldstore.js"
+SENTCS_PATH = "n_sent_coldstore.json"
+INBOUNDCS_PATH = "n_inbound_coldstore.json"
 
 STORE_INTERVAL = 3600
 

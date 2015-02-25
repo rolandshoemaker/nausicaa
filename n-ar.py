@@ -6,10 +6,15 @@ import json
 from time import sleep
 from redis import StrictRedis
 
+redis = StrictRedis()
+
 def load_cs(where):
-	with open(where "r") as f:
-		insides = json.load(f)
-	return insides
+	try:
+		with open(where, "r") as f:
+			insides = json.load(f)
+		return insides
+	except FileNotFoundError:
+		return []
 
 def update_cs(what, where):
 	with open(where, "w") as f:
@@ -17,16 +22,15 @@ def update_cs(what, where):
 
 def consume(cs, key, cs_path):
 	if redis.llen(key) > 0:
-			redis.lock(key)
+			lock = redis.lock(key)
 			things = redis.lrange(key, 0, -1)
-			cs += [json.loads(t) for t in things]
+			cs += [json.loads(t.decode("utf-8")) for t in things]
 			update_cs(cs, cs_path)
 			# idk if you can do it in this order... would be nice
+			lock.release()
 			redis.delete(key)
-			redis.release(key)
 
 def run():
-	redis = StrictRedis()
 	coldstore = load_cs(SENTCS_PATH)
 
 	while True:
@@ -34,3 +38,5 @@ def run():
 		consume(coldstore, INBOUNDCS_KEY, INBOUNDCS_PATH)
 
 		sleep(STORE_INTERVAL)
+
+run()
