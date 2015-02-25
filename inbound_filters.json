@@ -1,0 +1,13 @@
+[
+	// {
+	// 	"filter_name": "stuff...",
+	// 	"store_key": "filterd_list",
+	// 	"filter": {
+	// 		"keyword": "first_word",
+	// 		"msisdn": "specific sender",
+	// 		"to": "specific recipient",
+	// 		"type": "specific type",
+	// 		"text_contains": "text to search for in body"
+	// 	}
+	// }
+]

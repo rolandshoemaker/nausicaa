@@ -19,9 +19,6 @@ def send_request(url, method="post", url_args=None, json_obj=None):
 			raise ValueError # ...
 		return r.json()
 
-def validate_msg(msg):
-	pass
-
 class Nexmo(object):
 	key = None
 	secret = None
