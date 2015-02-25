@@ -1,4 +1,12 @@
 #!/usr/bin/python3
+#                        _                  
+#                       (_)                 
+#  _ __   __ _ _   _ ___ _  ___ __ _  __ _  
+# | '_ \ / _` | | | / __| |/ __/ _` |/ _` | 
+# | | | | (_| | |_| \__ \ | (_| (_| | (_| | 
+# |_| |_|\__,_|\__,_|___/_|\___\__,_|\__,_| 
+#                                           
+                                           
 import libnmo
 from config import API_KEY, API_SECRET, SEND_KEY, ERROR_KEY, SENTCS_KEY
 

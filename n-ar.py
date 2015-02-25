@@ -1,5 +1,13 @@
 #!/usr/bin/python3
+#                        _                  
+#                       (_)                 
+#  _ __   __ _ _   _ ___ _  ___ __ _  __ _  
+# | '_ \ / _` | | | / __| |/ __/ _` |/ _` | 
+# | | | | (_| | |_| \__ \ | (_| (_| | (_| | 
+# |_| |_|\__,_|\__,_|___/_|\___\__,_|\__,_| 
+#  
 # archiver
+
 from config import STORE_INTERVAL, SENTCS_KEY, DLRCS_KEY, INBOUNDCS_KEY, SENTCS_PATH, INBOUNDCS_PATH
 
 import json
