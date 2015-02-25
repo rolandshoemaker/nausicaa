@@ -6,6 +6,7 @@
 # | | | | (_| | |_| \__ \ | (_| (_| | (_| | 
 # |_| |_|\__,_|\__,_|___/_|\___\__,_|\__,_| 
 #                                           
+# licensed under the MIT license <http://opensource.org/licenses/MIT>
                                            
 import libnmo
 from config import API_KEY, API_SECRET, SEND_KEY, ERROR_KEY, SENTCS_KEY

@@ -5,6 +5,7 @@
 # | | | | (_| | |_| \__ \ | (_| (_| | (_| | 
 # |_| |_|\__,_|\__,_|___/_|\___\__,_|\__,_| 
 #  
+# licensed under the MIT license <http://opensource.org/licenses/MIT>
 
 from config import NEXMO_CALLBACK_SECRET, DLR_KEY, INBOUND_KEY, INBOUNDCS_KEY, NEXMO_RANGES, DEV_RANGES, ADMIN_NUM, FILTERS_PATH
 
